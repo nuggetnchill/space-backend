@@ -3,7 +3,10 @@ const bodyParser = require("body-parser");
 const bcrypt = require("bcryptjs");
 const cors = require("cors");
 const knex = require("knex");
-const { response } = require("express");
+
+const app = express();
+app.use(bodyParser.json());
+app.use(cors());
 
 const db = knex({
   client: "pg",
@@ -14,16 +17,6 @@ const db = knex({
     database: "postgres",
   },
 });
-
-db.select("*")
-  .from("users")
-  .then((data) => {
-    console.log(data);
-  });
-
-const app = express();
-
-app.use(bodyParser.json());
 
 const database = {
   users: [
@@ -45,12 +38,19 @@ const database = {
 };
 
 app.get("/", (req, res) => {
-  res.send("otter space api is listening");
+  res.send(database.users);
 });
 
-// app.post('/signin',(req,res)=>{
-
-// })
+app.post("/signin", (req, res) => {
+  if (
+    req.body.email === database.users[0].email &&
+    req.body.password === database.users[0].password
+  ) {
+    res.json("success");
+  } else {
+    res.status(400).json("error Logging IN");
+  }
+});
 
 app.post("/register", (req, res) => {
   const { email, name, password } = req.body;
@@ -63,6 +63,21 @@ app.post("/register", (req, res) => {
     })
     .then((response) => res.json(response))
     .catch((err) => res.status(400).json("Unable to Register"));
+});
+
+app.get("/profile/:id", (req, res) => {
+  const { id } = req.params;
+  db.select("*")
+    .from("users")
+    .where({ id })
+    .then((user) => {
+      if (user.length) {
+        res.json(user[0]);
+      } else {
+        res.status(400).json("User Not Found");
+      }
+    })
+    .catch((err) => res.status(400).json("Error Getting User"));
 });
 
 app.listen(process.env.PORT || 3001, () => {
